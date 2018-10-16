@@ -11,13 +11,19 @@
   "license": "ISC",
   "dependencies": {
     "cheerio": "^1.0.0-rc.2",
+    "eslint": "^5.7.0",
     "extend": "^3.0.1",
     "node-schedule": "^1.2.5",
     "phantom": "^4.0.11",
     "phantomjs": "^2.1.7+deprecated",
     "pm2": "^2.8.0",
-    "request": "^2.83.0",
+    "redis": "^2.8.0",
+    "request": "^2.88.0",
     "superagent": "^3.8.2",
     "webpage": "^0.3.0"
+  },
+  "devDependencies": {
+    "babel-eslint": "^10.0.1",
+    "eslint-config-airbnb": "^17.1.0"
   }
 }
