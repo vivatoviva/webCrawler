@@ -1,7 +1,6 @@
 const request = require('request');
 const cheerio = require('cheerio');
 const RedisClient = require('./operateProxy');
-
 const POOL_UPPER_THRESHOLD = 10000;
 
 function requestUrl (options){
@@ -31,7 +30,7 @@ class Crawler {
         // 爬下66ip的代理
         const urls = [];
         const proxies = [];
-        for(let i = 1; i < 100; i++) {
+        for(let i = 1; i < 2; i++) {
             urls.push(`http://www.66ip.cn/${i}.html`)
         }
         for(let url of urls) {
@@ -54,7 +53,6 @@ class Getter {
         this.redis = new RedisClient();
         this.crawler = new Crawler();
     }
-
     is_over_threshold() {
         if(this.redis.count() >= POOL_UPPER_THRESHOLD) {
             return true
@@ -66,10 +64,11 @@ class Getter {
         console.log('获取模块开始执行！');
         if(!this.is_over_threshold()) {
             const proxies = await this.crawler.getProxies();
-            console.log(proxies);
+            const addPromise = [];
             for(let item of proxies) {
-                this.redis.add(item);
+                addPromise.push(this.redis.add(item));
             }
+            return Promise.all(addPromise).then(() => this.redis.end())
         }
     }
 }

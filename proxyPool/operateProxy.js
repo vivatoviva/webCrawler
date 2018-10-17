@@ -15,13 +15,12 @@ bluebird.promisifyAll(redis.RedisClient.prototype);
 bluebird.promisifyAll(redis.Multi.prototype);
 
 class RedisClient {
-    constructor(props) {
+    constructor() {
         const client = redis.createClient(REDIS_CONFIG);
         client.on('error', (err) => {
             console.log(err)
             console.log('数据库连接失败');
         })
-
         this.client = client;
         this.add = this.add.bind(this);
         this.random = this.random.bind(this);
@@ -31,6 +30,7 @@ class RedisClient {
         this.max = this.max.bind(this);
         this.count = this.count.bind(this);
         this.all = this.all.bind(this);
+        this.end = this.end.bind(this);
     }
 
     add(proxy, score = INIT_SCORE) {
@@ -62,10 +62,12 @@ class RedisClient {
         // 代理减一
         const score = await this.client.zscoreAsync(REDIS_KEY, proxy);
         if(score && score > MIN_SCORE) {
-            console.log('当前代理', proxy, '减少1')
-            return this.client.zincrbyAsync(REDIS_KEY, proxy, -1);
+            console.log('当前代理', proxy, '测试失败,值减少1');
+            return this.client.zincrbyAsync(REDIS_KEY, -1, proxy).catch(error => {
+                console.log(error);
+            });
         } else {
-            console.log('当前代理', proxy, '删除')
+            console.log('当前代理', proxy, '测试失败，进行删除')
             return this.client.zremAsync(REDIS_KEY, proxy)
         }
     }
@@ -76,7 +78,9 @@ class RedisClient {
 
     max(proxy) {
         console.log('当前代理', proxy, '测试通过，值为100')
-        return this.client.zaddAsync(REDIS_KEY, MAX_SCORE, proxy)
+        return this.client.zaddAsync(REDIS_KEY, MAX_SCORE, proxy).catch(error => {
+            console.log(error);
+        })
     }
 
     count() {
@@ -87,5 +91,11 @@ class RedisClient {
         return this.client.zrangebyscoreAsync(REDIS_KEY, MIN_SCORE, MAX_SCORE);
     }
 
+    end() {
+        console.log('over')
+        this.client.quit();
+        this.client.end(true);
+        this.client = null;
+    }
 }
 module.exports = RedisClient;

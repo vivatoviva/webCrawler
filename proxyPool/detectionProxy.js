@@ -12,47 +12,51 @@ function requestUrl (options){
                 return resolve($);
             }
         })
-    }).catch(function(err){
-        console.log('ERROR', err)
     })
 }
 
 // 检测模块
 class Test {
-    constructor(props) {
-        super(props);
+    constructor() {
         this.redis = new RedisClient();
     }
-
     async check(proxy) {
         // 抓取百度，判断是不是有用的代理
         const option = {
             url: 'http://www.baidu.com',
-            proxy,
+            proxy: 'http://' + proxy,
             timeout: 5000,
         }
-        const $ = await requestUrl(option);
-        return $('title').text() === '百度一下，你就知道'
+        try {
+            const $ = await requestUrl(option);
+            if(!$) return false;
+            return $('title').text() === '百度一下，你就知道'
+        } catch(err) {
+            return false;
+        }
     }
 
     async run() {
         console.log('测试模块开始运行！');
-        const proxies = this.redis.all();
+        const proxies = await this.redis.all();
+
         const testPromise = [];
         // 测试函数
-        const TESTFUNCTION = proxy => new Promise((resolve, reject) => {
-            this.check(proxy).then(isTrue => {
+        const TESTFUNCTION = proxy => new Promise(() => {
+            return this.check(proxy).then(isTrue => {
                 if(isTrue) {
-                    this.redis.max(proxy);
+                    // 检查通过，设置scroe为最高
+                    return this.redis.max(proxy);
                 } else {
-                    this.redis.decrease(proxy);
+                    // 检查失败，设置scroe减一
+                    return this.redis.decrease(proxy);
                 }
             })
         })
         for(let proxy of proxies) {
             testPromise.push(TESTFUNCTION(proxy));
         }
-        return await Promise.all(testPromise);
+        return Promise.all(testPromise).then(() => this.redis.end());
     }
 }
 
