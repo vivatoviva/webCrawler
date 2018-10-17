@@ -31,15 +31,18 @@ class Crawler {
         // 爬下66ip的代理
         const urls = [];
         const proxies = [];
-        for(let i = 0; i < 1401; i++) {
+        for(let i = 1; i < 100; i++) {
             urls.push(`http://www.66ip.cn/${i}.html`)
         }
         for(let url of urls) {
             const $ = await requestUrl(url);
-            const trs = $('.main table tr');
+            const trs = $('#main table tr');
             for(let [key, tr] of Object.entries(trs)) {
-                const tds = $(tr).chilren();
-                proxies.push(`${tds[0].value}:${tds[1].value}`)
+                const tds = tr.children;
+                if(!tds || key == 0 || key == '_root' || key == 'prevObject') continue;
+                const ip = $(tds[0]).text();
+                const port = $(tds[1]).text();
+                proxies.push(`${ip}:${port}`);
             }
         }
         return proxies;
@@ -47,8 +50,7 @@ class Crawler {
 }
 
 class Getter {
-    constructor(props) {
-        super(props);
+    constructor() {
         this.redis = new RedisClient();
         this.crawler = new Crawler();
     }
@@ -64,6 +66,7 @@ class Getter {
         console.log('获取模块开始执行！');
         if(!this.is_over_threshold()) {
             const proxies = await this.crawler.getProxies();
+            console.log(proxies);
             for(let item of proxies) {
                 this.redis.add(item);
             }

@@ -1,19 +1,27 @@
 // 存储模块
 const redis = require('redis');
+const bluebird = require('bluebird');
 const INIT_SCORE = 20;
 const REDIS_KEY ='proxies';
 const MAX_SCORE = 100;
 const MIN_SCORE = 0;
 const REDIS_CONFIG ={
-    host: '',
-    port: '',
+    port: 6379,
+    host: '120.78.71.60',
+    password: 'genluo_123',
+    db: 0,
 }
+bluebird.promisifyAll(redis.RedisClient.prototype);
+bluebird.promisifyAll(redis.Multi.prototype);
+
 class RedisClient {
     constructor(props) {
-        const client = redis.createClient();
-        client.on('error', () => {
+        const client = redis.createClient(REDIS_CONFIG);
+        client.on('error', (err) => {
+            console.log(err)
             console.log('数据库连接失败');
         })
+
         this.client = client;
         this.add = this.add.bind(this);
         this.random = this.random.bind(this);
@@ -26,17 +34,17 @@ class RedisClient {
     }
 
     add(proxy, score = INIT_SCORE) {
-        if(this.client.zscore(REDIS_KEY, proxy)) {
-            this.client.zadd(REDIS_KEY, score, proxy);
+        if(this.client.zscoreAsync(REDIS_KEY, proxy)) {
+            this.client.zaddAsync(REDIS_KEY, score, proxy);
         }
     }
 
-    random() {
-        let result = this.client.zrangebyscore(REDIS_KEY, MAX_SCORE, MIN_SCORE);
+    async random() {
+        let result = await this.client.zrangebyscoreAsync(REDIS_KEY, MAX_SCORE, MIN_SCORE);
         if(result.length > 0) {
             return this.choice(result);
         }
-        result = this.client.zrevrange(REDIS_KEY, 0, 100);
+        result = await this.client.zrevrangeAsync(REDIS_KEY, 0, 100);
         if(result.length > 0) {
             return this.choice(result);
         }
@@ -50,30 +58,33 @@ class RedisClient {
         return data[randomValue];
     }
 
-    decrease(proxy) {
+    async decrease(proxy) {
         // 代理减一
-        const score = this.client.zscore(REDIS_KEY, proxy);
+        const score = await this.client.zscoreAsync(REDIS_KEY, proxy);
         if(score && score > MIN_SCORE) {
-            return this.client.zincrby(REDIS_KEY, proxy, -1);
+            console.log('当前代理', proxy, '减少1')
+            return this.client.zincrbyAsync(REDIS_KEY, proxy, -1);
         } else {
-            return this.client.zrem(REDIS_KEY, proxy)
+            console.log('当前代理', proxy, '删除')
+            return this.client.zremAsync(REDIS_KEY, proxy)
         }
     }
 
     exists(proxy) {
-        return this.client.zrem(REDIS_KEY, proxy) === null;
+        return this.client.zremAsync(REDIS_KEY, proxy) === null;
     }
 
     max(proxy) {
-        return this.client.zadd(REDIS_KEY, MAX_SCORE, proxy)
+        console.log('当前代理', proxy, '测试通过，值为100')
+        return this.client.zaddAsync(REDIS_KEY, MAX_SCORE, proxy)
     }
 
     count() {
-        return this.client.zcard(REDIS_KEY);
+        return this.client.zcardAsync(REDIS_KEY);
     }
 
     all() {
-        return this.client.zrangebyscore(REDIS_KEY, MIN_SCORE, MAX_SCORE);
+        return this.client.zrangebyscoreAsync(REDIS_KEY, MIN_SCORE, MAX_SCORE);
     }
 
 }

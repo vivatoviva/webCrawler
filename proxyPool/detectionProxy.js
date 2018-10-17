@@ -17,7 +17,6 @@ function requestUrl (options){
     })
 }
 
-
 // 检测模块
 class Test {
     constructor(props) {
