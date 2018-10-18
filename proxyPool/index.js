@@ -1,21 +1,12 @@
-// 调度进行处理
-const Crawler = require('./getProxy');
-const RedisClient = require('./operateProxy');
-const TestCrawel = require('./detectionProxy');
+
 // const schedule = require('node-schedule');
+const child_process = require('child_process');
 
-const crawler = new Crawler();
-const client = new RedisClient();
-const test = new TestCrawel();
+const ps = child_process.spawn('node', ['init.js']);
 
 
-// async function init() {
-//     // await crawler.run();
-//     // await test.run();
-//     const all = await client.all();
-//     console.log(all);
-  
-// }
-// init();
-
-setTimeout(()=> {  client.end();}, 1000)
+ps.on('close', (code) => {
+  if (code !== 0) {
+    console.log(`ps 进程退出码：${code}`);
+  }
+});
